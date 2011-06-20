@@ -123,7 +123,7 @@ class Request(object):
             elif hasattr(self._body, 'getvalue') and not \
                     self.is_chunked():
                 clen = len(self._body.getvalue())
-            elif isinstance(self._body, types.StringTypes):
+            elif isinstance(self._body, (binary_type, string_types,)):
                 self._body = to_bytestring(self._body)
                 clen = len(self._body)
 

@@ -5,6 +5,7 @@
 
 import os
 import re
+import sys
 import time
 import urllib
 import urlparse
@@ -13,6 +14,26 @@ import warnings
 from restkit.errors import InvalidUrl
 
 absolute_http_url_re = re.compile(r"^https?://", re.I)
+
+PY3 = sys.version_info[0] == 3
+
+if PY3:
+    string_types = str,
+    integer_types = int,
+    class_types = type,
+    text_type = str
+    binary_type = bytes
+
+    MAXSIZE = sys.maxsize
+else:
+    string_types = basestring,
+    integer_types = (int, long)
+    class_types = (type, types.ClassType)
+    text_type = unicode
+    binary_type = str
+
+    MAXSIZE = sys.maxint
+
 
 try:#python 2.6, use subprocess
     import subprocess
@@ -83,7 +104,7 @@ def parse_netloc(uri):
     return (host, port)
 
 def to_bytestring(s):
-    if not isinstance(s, basestring):
+    if not isinstance(s, (string_types, binary_type,)):
         raise TypeError("value should be a str or unicode")
 
     if isinstance(s, unicode):

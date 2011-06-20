@@ -3,7 +3,7 @@
 #
 # This file is part of restkit released under the MIT license. 
 # See the NOTICE for more information.
-from __future__ import with_statement
+
 
 try:
     from setuptools import setup
@@ -73,7 +73,7 @@ def main():
             license = 'BSD',
             url = 'http://benoitc.github.com/restkit',
             classifiers = CLASSIFIERS,
-            packages = PACKAGES.keys(),
+            packages = list(PACKAGES.keys()),
             package_dir = PACKAGES,
             data_files = DATA_FILES,
             scripts = SCRIPTS

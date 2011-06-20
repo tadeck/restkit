@@ -34,13 +34,14 @@ def close(skt):
         pass  
         
 def send_chunk(sock, data):
-    chunk = "".join(("%X\r\n" % len(data), data, "\r\n"))
-    sock.sendall(b(chunk))
+    chunk = b("").join((b("%X\r\n" % len(data)), data, b("\r\n")))
+    sock.sendall(chunk)
 
 def send(sock, data, chunked=False):
     if chunked:
         return send_chunk(sock, data)
-    sock.sendall(b(data))
+    print data
+    sock.sendall(data)
         
 def send_nonblock(sock, data, chunked=False):
     timeout = sock.gettimeout()

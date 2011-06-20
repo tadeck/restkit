@@ -46,7 +46,8 @@ NoMoreData, ProxyError
 from restkit.globals import get_manager
 from restkit.sock import close, send, sendfile, sendlines, send_chunk, \
 validate_ssl_args
-from restkit.util import parse_netloc, rewrite_location
+from restkit.util import parse_netloc, rewrite_location, string_types, \
+binary_type
 from restkit.wrappers import Request, Response
 
 MAX_CLIENT_TIMEOUT=300
@@ -335,8 +336,8 @@ class Client(object):
                 sck = connection.socket()
 
                 # send headers
-                msg = self.make_headers_string(request,
-                        connection.extra_headers)
+                msg = b(self.make_headers_string(request,
+                        connection.extra_headers))
 
                 # send body
                 if request.body is not None:
@@ -353,7 +354,7 @@ class Client(object):
                     hdr_expect = request.headers.iget("expect")
                     if hdr_expect is not None and \
                             hdr_expect.lower() == "100-continue":
-                        sck.sendall(b(msg))
+                        sck.sendall(msg)
                         msg = None
                         resp = http.Request(http.Unreader(self._sock))
                         if resp.status_int != 100:
@@ -368,14 +369,14 @@ class Client(object):
                         log.debug("send body (chunked: %s)" % chunked)
 
 
-                    if isinstance(request.body, types.StringTypes):
+                    if isinstance(request.body, binary_type):
                         if msg is not None:
                             send(sck, msg + request.body, chunked)
                         else:
                             send(sck, request.body, chunked)
                     else:
                         if msg is not None:
-                            sck.sendall(b(msg))
+                            sck.sendall(msg)
 
                         if hasattr(request.body, 'read'):
                             if hasattr(request.body, 'seek'): request.body.seek(0)
@@ -383,9 +384,9 @@ class Client(object):
                         else:
                             sendlines(sck, request.body, chunked)
                     if chunked:
-                        send_chunk(sck, "")
+                        send_chunk(sck, b(""))
                 else:
-                    sck.sendall(b(msg))
+                    sck.sendall(msg)
 
                 return self.get_response(request, connection)
             except socket.gaierror, e:
@@ -411,7 +412,7 @@ class Client(object):
                 except:
                     pass
 
-                if e[0] not in (errno.EAGAIN, errno.ECONNABORTED,
+                if e.args[0] not in (errno.EAGAIN, errno.ECONNABORTED,
                         errno.EPIPE, errno.ECONNREFUSED,
                         errno.ECONNRESET, errno.EBADF) or tries <= 0:
                     raise RequestError("socket.error: %s" % str(e))

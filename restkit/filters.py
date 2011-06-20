@@ -11,6 +11,8 @@ except ImportError:
     from cgi import parse_qsl
 from urlparse import urlunparse
 
+from http_parser.util import bytes_to_str
+
 from restkit.oauth2 import Request, SignatureMethod_HMAC_SHA1
 
 class BasicAuth(object):
@@ -20,8 +22,8 @@ class BasicAuth(object):
         self.credentials = (username, password)
     
     def on_request(self, request):
-        encode = base64.b64encode("%s:%s" % self.credentials)
-        request.headers['Authorization'] = 'Basic %s' %  encode
+        encode = base64.b64encode(b("%s:%s" % self.credentials))
+        request.headers['Authorization'] = 'Basic %s' % bytes_to_str(encode)
 
 def validate_consumer(consumer):
     """ validate a consumer agains oauth2.Consumer object """
