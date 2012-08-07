@@ -14,7 +14,9 @@ import types
 import urlparse
 
 try:
-    from http_parser.http import HttpStream, BadStatusLine
+    from http_parser.http import (
+            HttpStream, BadStatusLine, NoMoreData
+    )
     from http_parser.reader import SocketReader
 except ImportError:
     raise ImportError("""http-parser isn't installed or out of data.
@@ -25,7 +27,7 @@ from restkit import __version__
 
 from restkit.conn import Connection
 from restkit.errors import RequestError, RequestTimeout, RedirectLimit, \
-NoMoreData, ProxyError
+ProxyError
 from restkit.session import get_session
 from restkit.util import parse_netloc, rewrite_location, to_bytestring
 from restkit.wrappers import Request, Response
@@ -76,7 +78,6 @@ class Client(object):
             use_proxy=False,
             max_tries=3,
             wait_tries=0.3,
-            max_conn=150,
             pool_size=10,
             backend="thread",
             **ssl_args):
@@ -111,9 +112,6 @@ class Client(object):
         :param wait_tries: number of time we wait between each tries.
         :attr pool_size: int, default 10. Maximum number of connections we
         keep in the default pool.
-        :attr max_conn: int, default 150. Maximum number of connections we
-        create outside the pool before raising the exception MaxConnectionError.
-        If None, the number of connections won't be limited.
         :param ssl_args: named argument, see ssl module for more
         informations
         """
@@ -136,7 +134,6 @@ class Client(object):
         session_options = dict(
                 retry_delay=wait_tries,
                 max_size = pool_size,
-                max_conn = max_conn,
                 retry_max = max_tries,
                 timeout = timeout)
 
@@ -152,7 +149,6 @@ class Client(object):
 
         self.max_tries = max_tries
         self.wait_tries = wait_tries
-        self.max_conn = max_conn
         self.pool_size = pool_size
         self.timeout = timeout
 
@@ -388,7 +384,15 @@ class Client(object):
                 # should raised an exception in other cases
                 request.maybe_rewind(msg=str(e))
 
+            except NoMoreData, e:
+                if conn is not None:
+                    conn.release(True)
+
+                request.maybe_rewind(msg=str(e))
+                if tries >= self.max_tries:
+                    raise
             except BadStatusLine:
+
                 if conn is not None:
                     conn.release(True)
 
@@ -465,8 +469,13 @@ class Client(object):
         location = p.headers().get('location')
 
         if self.follow_redirect:
+            should_close = not p.should_keep_alive()
             if p.status_code() in (301, 302, 307,):
-                connection.close()
+
+                # read full body and release the connection
+                p.body_file().read()
+                connection.release(should_close)
+
                 if request.method in ('GET', 'HEAD',) or \
                         self.force_follow_redirect:
                     if hasattr(self.body, 'read'):
@@ -479,7 +488,10 @@ class Client(object):
                     return self.redirect(location, request)
 
             elif p.status_code() == 303 and self.method == "POST":
-                connection.close()
+                # read full body and release the connection
+                p.body_file().read()
+                connection.release(should_close)
+
                 request.method = "GET"
                 request.body = None
                 return self.redirect(location, request)

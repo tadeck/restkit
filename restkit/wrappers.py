@@ -60,11 +60,7 @@ class Request(object):
     path = property(_path__get)
 
     def _host__get(self):
-        try:
-            h = self.parsed_url.netloc.encode('ascii')
-        except UnicodeEncodeError:
-            h = self.parsed_url.netloc.encode('idna')
-
+        h = to_bytestring(self.parsed_url.netloc)
         hdr_host = self.headers.iget("host")
         if not hdr_host:
             return h
@@ -155,6 +151,8 @@ class BodyWrapper(object):
         self.resp = resp
         self.body = resp._body
         self.connection = connection
+        self._closed = False
+        self.eof = False
 
     def __enter__(self):
         return self
@@ -164,7 +162,14 @@ class BodyWrapper(object):
 
     def close(self):
         """ release connection """
+        if self._closed:
+            return
+
+        if not self.eof:
+            self.body.read()
+
         self.connection.release(self.resp.should_close)
+        self._closed = True
 
     def __iter__(self):
         return self
@@ -173,24 +178,28 @@ class BodyWrapper(object):
         try:
             return self.body.next()
         except StopIteration:
+            self.eof = True
             self.close()
             raise
 
     def read(self, n=-1):
         data = self.body.read(n)
         if not data:
+            self.eof = True
             self.close()
         return data
 
     def readline(self, limit=-1):
         line = self.body.readline(limit)
         if not line:
+            self.eof = True
             self.close()
         return line
 
     def readlines(self, hint=None):
         lines = self.body.readlines(hint)
         if self.body.close:
+            self.eof = True
             self.close()
         return lines
 
@@ -248,9 +257,15 @@ class Response(object):
     def can_read(self):
         return not self._already_read
 
-
     def close(self):
         self.connection.release(True)
+
+    def skip_body(self):
+        """ skip the body and release the connection """
+        if not self._already_read:
+            self._body.read()
+            self._already_read = True
+            self.connection.release(self.should_close)
 
     def body_string(self, charset=None, unicode_errors="strict"):
         """ return body string, by default in bytestring """

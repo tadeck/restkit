@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -
 #
-# This file is part of restkit released under the MIT license. 
+# This file is part of restkit released under the MIT license.
 # See the NOTICE for more information.
 
 import sys, os
@@ -17,7 +17,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 project = u'restkit'
-copyright = u'2010, Benoît Chesneau <benoitc@e-engura.org>'
+copyright = u'2008-2012 Benoît Chesneau <benoitc@e-engura.org>'
 
 
 version = restkit.__version__

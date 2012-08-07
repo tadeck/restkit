@@ -3,6 +3,26 @@
 News
 ====
 
+4.2.0 / 2012-08-01
+------------------
+
+- fix a race condition while releasing the socket on incomplete read
+
+4.1.5 / 2012-07-28
+------------------
+
+- catch NoMoreData error on headers parsing
+- fix Host Header
+
+4.1.4 / 2012-07-24
+------------------
+
+- add the **skip_body** method to the response object
+- fix connection reset
+- fix unicode encoding in oauth
+- remove max_connection setting in the client
+
+
 4.1.3 / 2012-06-06
 ------------------
 
